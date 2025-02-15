@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
 import json
-from decision_engine import run_pipeline, kyc_decision  # Import your existing pipeline
+from kyc_engine.decision_making import run_pipeline, kyc_decision
 
 app = Flask(__name__)
 
