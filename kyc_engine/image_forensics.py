@@ -1,3 +1,6 @@
+"""
+Pixel-level forensic analysis module for detecting image manipulation.
+"""
 import os
 import cv2
 import numpy as np
@@ -5,8 +8,19 @@ import matplotlib.pyplot as plt
 from skimage.util import random_noise
 from skimage.metrics import structural_similarity as ssim
 
+from kyc_engine.shared import get_output_path
+
 
 def analyze_edges(image):
+    """
+    Analyze image edges to detect anomalies.
+    
+    Args:
+        image: OpenCV image array
+        
+    Returns:
+        Edge strength score
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
@@ -15,6 +29,15 @@ def analyze_edges(image):
 
 
 def analyze_noise(image):
+    """
+    Analyze noise patterns to detect anomalies.
+    
+    Args:
+        image: OpenCV image array
+        
+    Returns:
+        Noise level score
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     noise_estimate = random_noise(gray, mode='gaussian')
     noise_difference = cv2.absdiff(gray, (noise_estimate * 255).astype(np.uint8))
@@ -22,6 +45,15 @@ def analyze_noise(image):
 
 
 def detect_cloning(image):
+    """
+    Detect potential cloning/copy-paste in the image.
+    
+    Args:
+        image: OpenCV image array
+        
+    Returns:
+        Cloning detection score
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     h, w = gray.shape
     block_size = 50
@@ -39,6 +71,15 @@ def detect_cloning(image):
 
 
 def jpeg_artifact_analysis(image):
+    """
+    Analyze JPEG compression artifacts for anomalies.
+    
+    Args:
+        image: OpenCV image array
+        
+    Returns:
+        Artifact score
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, compressed = cv2.imencode('.jpg', gray, [cv2.IMWRITE_JPEG_QUALITY, 50])
     decompressed = cv2.imdecode(compressed, cv2.IMREAD_GRAYSCALE)
@@ -47,6 +88,15 @@ def jpeg_artifact_analysis(image):
 
 
 def pixel_level_check(image_path):
+    """
+    Perform comprehensive pixel-level forensic analysis.
+    
+    Args:
+        image_path: Path to the input image
+        
+    Returns:
+        Dictionary with analysis results
+    """
     image = cv2.imread(image_path)
     if image is None:
         return {"status": "error", "message": "Image not found"}
@@ -93,18 +143,28 @@ def pixel_level_check(image_path):
     return result
 
 
-def generate_composite_image(image_path):
+def generate_composite_image(image_path, output_path=None):
     """
-    Generates a composite image using matplotlib that displays:
+    Generate a composite visualization of forensic analysis results.
+    
+    The visualization includes:
       - Original image
       - Edge detection visualization
-      - Noise difference visualization
-      - Cloning detection visualization (with best match highlighted)
+      - Noise difference visualization 
+      - Cloning detection visualization
       - JPEG artifact difference visualization
-      - A summary tile with the final check results
-
-    The composite image is saved in the folder 'temp'.
+      - Summary of analysis results
+    
+    Args:
+        image_path: Path to the input image
+        output_path: Optional path to save the composite image
+        
+    Returns:
+        Path to the saved composite image
     """
+    if output_path is None:
+        output_path = get_output_path("forensics_composite.png", "analysis")
+        
     image = cv2.imread(image_path)
     if image is None:
         raise ValueError("Image not found")
@@ -198,19 +258,22 @@ def generate_composite_image(image_path):
 
     plt.tight_layout()
 
-    # --- Save Composite Image ---
-    output_folder = "temp"
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-    output_path = os.path.join(output_folder, "composite_image.png")
+    # Save the composite image
     plt.savefig(output_path)
     plt.close(fig)
 
     return output_path
 
-# Example usage:
-# result = pixel_level_check(r"C:\Users\nazguul\Desktop\PFE_Workplace\Resources\ID Cards\new_york_fake_id-scaled-e1601065688702-1600x1029.jpg")
-# print(result)
-#
-# composite_path = generate_composite_image(r"C:\Users\nazguul\Desktop\PFE_Workplace\Resources\ID Cards\new_york_fake_id-scaled-e1601065688702-1600x1029.jpg")
-# print(f"Composite image saved at: {composite_path}")
+
+if __name__ == "__main__":
+    # Example test case
+    test_image = r"C:\Users\nazguul\Desktop\PFE_Workplace\Resources\ID Cards\new_york_fake_id-scaled-e1601065688702-1600x1029.jpg"
+    
+    # Run detailed forensic analysis with visualization
+    composite_path = generate_composite_image(test_image)
+    print(f"Composite forensic image saved at: {composite_path}")
+    
+    # Simple analysis
+    analysis_result = pixel_level_check(test_image)
+    print("Forensic Analysis Result:")
+    print(analysis_result)

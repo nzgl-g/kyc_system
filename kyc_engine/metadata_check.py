@@ -1,15 +1,34 @@
-from PIL import Image, ExifTags
-from kyc_engine.shared import *
+"""
+Metadata analysis module for detecting image tampering through EXIF data.
+"""
+import json
+from typing import Dict, Any, Optional
 
-def extract_metadata(image_path):
+from PIL import Image, ExifTags
+from kyc_engine.shared import (
+    GLOBAL_TAMPERING_PROMPT,
+    api_call,
+    GEMINI_ENDPOINT,
+    parse_json
+)
+
+
+def extract_metadata(image_path: str) -> Dict[str, Any]:
     """
-    Extracts all available EXIF metadata from an image using Pillow.
+    Extract all available EXIF metadata from an image using Pillow.
+    
+    Args:
+        image_path: Path to the image file
+        
+    Returns:
+        Dictionary containing EXIF metadata with decoded tag names
     """
     try:
         img = Image.open(image_path)
         exif_data = img._getexif()
         if not exif_data:
             return {}
+            
         metadata = {}
         for tag, value in exif_data.items():
             decoded = ExifTags.TAGS.get(tag, tag)
@@ -20,10 +39,15 @@ def extract_metadata(image_path):
         return {}
 
 
-
-def detect_tampering(image_path):
+def detect_tampering(image_path: str) -> Optional[Dict[str, Any]]:
     """
-    Extracts all metadata and sends it to the AI for forensic analysis.
+    Extract metadata and analyze it for signs of tampering.
+    
+    Args:
+        image_path: Path to the image file
+        
+    Returns:
+        Analysis result with status and message fields
     """
     full_metadata = extract_metadata(image_path)
 
@@ -33,16 +57,17 @@ def detect_tampering(image_path):
         indent=2,
         default=lambda o: float(o) if hasattr(o, 'numerator') and hasattr(o, 'denominator') else str(o)
     )
+    
     # Build the prompt with the complete metadata injected
     prompt = GLOBAL_TAMPERING_PROMPT.format(metadata=metadata_json)
+    
     # Call the Gemini API using only the text prompt
     result = api_call(GEMINI_ENDPOINT, prompt)
     return parse_json(result)
 
 
-
 if __name__ == "__main__":
-    # Update the path to your image file
+    # Example test case
     image_path = r"C:\Users\nazguul\Desktop\PFE_Workplace\Resources\ID Cards\20220327_171259 (1).jpg"
     tampering_result = detect_tampering(image_path)
 

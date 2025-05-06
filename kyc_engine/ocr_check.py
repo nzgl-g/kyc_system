@@ -1,30 +1,56 @@
-from ollama import chat, ChatResponse  # Ensure you have the ollama package installed
-from kyc_engine.shared import *
+"""
+OCR verification module for extracting and verifying information from ID cards.
+"""
+from typing import Dict, Optional, Any
+
+from ollama import chat, ChatResponse
+from kyc_engine.shared import (
+    GLOBAL_OCR_PROMPT,
+    api_call,
+    GEMINI_ENDPOINT,
+    parse_json
+)
 
 
-
-def gemini(form_data, img_path):
-    """Processes extraction and comparison using the Gemini API."""
+def gemini(form_data: Dict[str, str], img_path: str) -> Optional[Dict[str, Any]]:
+    """
+    Process ID card extraction and verification using the Gemini API.
+    
+    Args:
+        form_data: Dictionary containing user submitted identity information
+        img_path: Path to the uploaded ID card image
+        
+    Returns:
+        Parsed JSON result with extraction and verification data
+    """
     prompt = GLOBAL_OCR_PROMPT.format(
-        form_full_name=form_data.get("full_name"),
-        form_dob=form_data.get("dob"),
-        form_nationality=form_data.get("nationality"),
-        form_id_number=form_data.get("id_number")
+        form_full_name=form_data.get("full_name", ""),
+        form_dob=form_data.get("dob", ""),
+        form_nationality=form_data.get("nationality", ""),
+        form_id_number=form_data.get("id_number", "")
     )
     return parse_json(api_call(GEMINI_ENDPOINT, prompt, img_path))
 
 
-def ollama(form_data, image_path):
+def ollama(form_data: Dict[str, str], image_path: str) -> str:
     """
-    Processes extraction and comparison using the Ollama API.
+    Process ID card extraction and verification using the Ollama API.
+    
     Note: The Ollama Python package currently only accepts text input.
     If image data is needed, consider encoding and appending it to the prompt.
+    
+    Args:
+        form_data: Dictionary containing user submitted identity information
+        image_path: Path to the uploaded ID card image
+        
+    Returns:
+        Raw response text from Ollama model
     """
     prompt = GLOBAL_OCR_PROMPT.format(
-        form_full_name=form_data.get("full_name"),
-        form_dob=form_data.get("dob"),
-        form_nationality=form_data.get("nationality"),
-        form_id_number=form_data.get("id_number")
+        form_full_name=form_data.get("full_name", ""),
+        form_dob=form_data.get("dob", ""),
+        form_nationality=form_data.get("nationality", ""),
+        form_id_number=form_data.get("id_number", "")
     )
     messages = [
         {
@@ -37,7 +63,7 @@ def ollama(form_data, image_path):
 
 
 if __name__ == "__main__":
-    # Static form data as JSON
+    # Example test case
     form_data = {
         "full_name": "Younes Habbal",
         "dob": "09-22-2002",

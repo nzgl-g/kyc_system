@@ -1,34 +1,69 @@
+"""
+KYC Verification System - Main Application
+
+A Flask-based web application for verifying user identities through document analysis.
+"""
+import os
+import json
+from datetime import datetime
+from typing import Dict, Any
+
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
-import os
-from datetime import datetime
-import json
-from kyc_engine.decision_making import run_pipeline, kyc_decision
 
+from kyc_engine.decision_making import run_pipeline, kyc_decision
+from api.kyc_service import kyc_api
+from kyc_engine.shared import ensure_output_dir
+
+# Initialize Flask app
 app = Flask(__name__)
+
+# Register API blueprint
+app.register_blueprint(kyc_api)
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
-# Create uploads folder if it doesn't exist
+# Create required directories
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+# Initialize the output directories
+ensure_output_dir()
+ensure_output_dir('temp')
+ensure_output_dir('analysis')
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
-def allowed_file(filename):
+def allowed_file(filename: str) -> bool:
+    """
+    Check if the uploaded file has an allowed extension.
+    
+    Args:
+        filename: Name of the uploaded file
+        
+    Returns:
+        True if file extension is allowed, False otherwise
+    """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.route('/')
 def home():
+    """Render the home page with the verification form."""
     return render_template('index.html')
 
 
 @app.route('/verify_kyc', methods=['POST'])
 def verify_kyc():
+    """
+    Process KYC verification request from the web form.
+    
+    Returns:
+        JSON response with verification results or error message
+    """
     try:
         # Check if image file is present
         if 'id_image' not in request.files:
@@ -62,10 +97,10 @@ def verify_kyc():
             # Clean up uploaded file
             os.remove(filepath)
 
-            # Try to parse the decision as JSON
+            # Parse the decision as JSON
             try:
                 decision_json = json.loads(decision)
-            except:
+            except json.JSONDecodeError:
                 # If it's not valid JSON, create a structured response
                 decision_json = {
                     "status": "KYC Worked peacefully",

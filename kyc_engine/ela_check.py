@@ -1,20 +1,35 @@
+"""
+Error Level Analysis (ELA) module for detecting image tampering.
+"""
 from PIL import Image, ImageChops, ImageEnhance
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+from kyc_engine.shared import get_output_path
 
-def ela_analysis(image_path, quality=90, output_path="temp/temp_ela_result.jpg"):
+
+def ela_analysis(image_path, quality=90, output_path=None):
+    """
+    Perform Error Level Analysis on an image to detect tampering.
+    
+    Args:
+        image_path: Path to the input image
+        quality: JPEG compression quality for recompression
+        output_path: Optional path to save the ELA image
+        
+    Returns:
+        Dictionary with analysis results
+    """
     # Open the image and convert to RGB
     original = Image.open(image_path).convert("RGB")
 
-    # Ensure the temp directory exists
-    temp_dir = "../temp"
-    if not os.path.exists(temp_dir):
-        os.makedirs(temp_dir)
-
+    # Generate output path if not provided
+    if output_path is None:
+        output_path = get_output_path("ela_result.jpg", "analysis")
+    
     # Save a temporary JPEG with controlled quality
-    temp_path = os.path.join(temp_dir, "temp_ela_check.jpg")
+    temp_path = get_output_path("temp_ela_check.jpg", "temp")
     original.save(temp_path, "JPEG", quality=quality)
 
     # Reopen the recompressed image
@@ -46,14 +61,15 @@ def ela_analysis(image_path, quality=90, output_path="temp/temp_ela_result.jpg")
     report = {
         "status": status,
         "message": message,
-        "error_level": max_diff
+        "error_level": max_diff,
+        "output_path": output_path
     }
     return report
 
 
-def generate_composite_ela_image(image_path, quality=90):
+def generate_composite_ela_image(image_path, quality=90, output_path=None):
     """
-    Generates a composite image using matplotlib for ELA analysis.
+    Generate a composite image visualizing the ELA analysis results.
 
     The composite includes:
       - Original image
@@ -61,19 +77,25 @@ def generate_composite_ela_image(image_path, quality=90):
       - ELA result image
       - A summary tile with the final ELA analysis report
 
-    The composite image is saved in the 'temp' folder.
+    Args:
+        image_path: Path to the input image
+        quality: JPEG compression quality for recompression
+        output_path: Optional path to save the composite image
+        
+    Returns:
+        Path to the saved composite image
     """
-    output_folder = "temp"
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
+    # Generate output path if not provided
+    if output_path is None:
+        output_path = get_output_path("composite_ela_image.png", "analysis")
+    
     # Perform ELA analysis and save the result image
-    ela_result_path = os.path.join(output_folder, "temp_ela_result.jpg")
+    ela_result_path = get_output_path("ela_result.jpg", "analysis")
     report = ela_analysis(image_path, quality=quality, output_path=ela_result_path)
 
     # Load images with PIL and convert to NumPy arrays for plotting
     original = Image.open(image_path).convert("RGB")
-    recompressed = Image.open(os.path.join(output_folder, "temp_ela_check.jpg")).convert("RGB")
+    recompressed = Image.open(get_output_path("temp_ela_check.jpg", "temp")).convert("RGB")
     ela_image = Image.open(ela_result_path).convert("RGB")
 
     original_np = np.array(original)
@@ -111,13 +133,21 @@ def generate_composite_ela_image(image_path, quality=90):
     plt.tight_layout()
 
     # Save the composite image
-    composite_output = os.path.join(output_folder, "composite_ela_image.png")
-    plt.savefig(composite_output)
+    plt.savefig(output_path)
     plt.close(fig)
 
-    return composite_output
+    return output_path
 
-# Example usage:
-# composite_path = generate_composite_ela_image(r"C:\Users\nazguul\Desktop\PFE_Workplace\Resources\ID Cards\new_york_fake_id-scaled-e1601065688702-1600x1029.jpg" ,quality=90)
-# print(f"Composite ELA image saved at: {composite_path}")
-# print(ela_analysis(r"C:\Users\nazguul\Desktop\PFE_Workplace\Resources\ID Cards\20220327_171259 (1).jpg"))
+
+if __name__ == "__main__":
+    # Example test case
+    test_image = r"C:\Users\nazguul\Desktop\PFE_Workplace\Resources\ID Cards\new_york_fake_id-scaled-e1601065688702-1600x1029.jpg"
+    
+    # Run ELA analysis and generate composite visualization
+    composite_path = generate_composite_ela_image(test_image, quality=90)
+    print(f"Composite ELA image saved at: {composite_path}")
+    
+    # Simple ELA analysis
+    analysis_result = ela_analysis(test_image)
+    print("ELA Analysis Result:")
+    print(analysis_result)

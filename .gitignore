@@ -1,4 +1,8 @@
-.env
-.venv
+uploads
+output
 temp
 kyc_engine/temp
+__pycache__
+.env
+.idea
+.venv
